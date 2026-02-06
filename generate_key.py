@@ -68,6 +68,10 @@ def main():
 	parser.add_option('', '--bin-out', dest='bin_output_name',
 		help='output file name for binary output (overrides --bin)',
 		metavar='FILE', default=None)
+
+	parser.add_option('-d', '--debug', action='store_true',
+		dest='debug_output', default=False,
+		help='print human-readable data during batch generation')
 	
 	parser.add_option('-t', '--test', action='store_true', 
 		dest='do_test', default=False, 
@@ -110,7 +114,13 @@ def main():
 	# output the key
 	if output_bin_path:
 		if bin_count > 1:
-			output_bin_batch(bin_count, key_matrix, options.gen_sink, output_bin_path)
+			output_bin_batch(
+				bin_count,
+				key_matrix,
+				options.gen_sink,
+				output_bin_path,
+				options.debug_output,
+			)
 		else:
 			output_bin_single(ksv, key, output_bin_path)
 	elif options.output_json:
@@ -299,7 +309,7 @@ def output_bin_single(ksv, key, output_path):
 		if output_path != '-':
 			stream.close()
 
-def output_bin_batch(count, key_matrix, is_sink, output_path):
+def output_bin_batch(count, key_matrix, is_sink, output_path, debug_output):
 	"""Write multiple keys in binary format.
 
 	Format: 01 00 00 00 + (KSV + 00 00 00 + key data + SHA-1) * count
@@ -311,6 +321,8 @@ def output_bin_batch(count, key_matrix, is_sink, output_path):
 		for _ in range(count):
 			ksv = gen_ksv()
 			key = gen_sink_key(ksv, key_matrix) if is_sink else gen_source_key(ksv, key_matrix)
+			if debug_output:
+				output_human_readable(ksv, key, is_sink)
 			stream.write(build_bin_record(ksv, key))
 	finally:
 		if output_path != '-':

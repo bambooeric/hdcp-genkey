@@ -16,6 +16,7 @@ Options:
   -b FILE, --bin=FILE   output key and KSV to a binary FILE (use "-" for stdout)
   -n COUNT, --count=COUNT
                         number of keys to generate for binary output
+  -d, --debug           print human-readable data during batch generation
   --bin-out=FILE        output file name for binary output (overrides --bin)
   -t, --test            generate source and sink keys and test they work
 ```
@@ -35,6 +36,9 @@ Examples:
 
 # Generate 10 keys in a single binary file
 ./generate_key.py -b keys.bin -n 10
+
+# Generate 10 keys and print readable output during batch generation
+./generate_key.py -b keys.bin -n 10 -d
 
 # Run a self-test to make sure the source a sink key generation is consistent
 ./generate_key.py -t
