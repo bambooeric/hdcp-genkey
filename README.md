@@ -13,6 +13,7 @@ Options:
   -k, --sink            generate a sink key rather than a source key
   --ksv=KSV             use a specific KSV expressed in hexadecimal
   -j, --json            output key and KSV as JSON
+  -b FILE, --bin=FILE   output key and KSV to a binary FILE (use "-" for stdout)
   -t, --test            generate source and sink keys and test they work
 ```
 
@@ -26,7 +27,9 @@ Examples:
 # human-readable form
 ./generate_key.py
 
+# Generate a source key in the binary output format
+./generate_key.py -b key.bin
+
 # Run a self-test to make sure the source a sink key generation is consistent
 ./generate_key.py -t
 ```
-

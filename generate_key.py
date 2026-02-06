@@ -25,9 +25,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import hashlib
 import json
 import string
 import random
+import sys
 
 from optparse import OptionParser
 
@@ -53,6 +55,10 @@ def main():
 	parser.add_option('-j', '--json', action='store_true', 
 		dest='output_json', default=False, 
 		help='output key and KSV as JSON')
+
+	parser.add_option('-b', '--bin', dest='output_bin',
+		help='output key and KSV to a binary FILE (use "-" for stdout)',
+		metavar='FILE', default=None)
 	
 	parser.add_option('-t', '--test', action='store_true', 
 		dest='do_test', default=False, 
@@ -81,7 +87,9 @@ def main():
 		key = gen_source_key(ksv, key_matrix)
 
 	# output the key
-	if options.output_json:
+	if options.output_bin:
+		output_bin(ksv, key, options.gen_sink, options.output_bin)
+	elif options.output_json:
 		output_json(ksv, key, options.gen_sink)
 	else:
 		output_human_readable(ksv, key, options.gen_sink)
@@ -230,6 +238,24 @@ def output_json(ksv, key, is_sink):
 		'key': [ '%014x' % x for x in key ],
 		'type': 'sink' if is_sink else 'source' },
 		sort_keys=True, indent=True))
+
+def output_bin(ksv, key, is_sink, output_path):
+	"""Write a binary version of the KSV and key.
+
+	Format: KSV (5 bytes) + 00 00 00 + key data (280 bytes) + SHA-1 (20 bytes).
+	"""
+
+	ksv_bytes = ksv.to_bytes(5, 'big')
+	key_bytes = b''.join(x.to_bytes(7, 'big') for x in key)
+	payload = ksv_bytes + b'\x00\x00\x00' + key_bytes
+	digest = hashlib.sha1(payload).digest()
+
+	stream = sys.stdout.buffer if output_path == '-' else open(output_path, 'wb')
+	try:
+		stream.write(payload + digest)
+	finally:
+		if stream is not sys.stdout.buffer:
+			stream.close()
 
 # run the 'main' function if this file is being executed directly
 if __name__ == '__main__':
