@@ -26,6 +26,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import hashlib
+import io
 import json
 import string
 import random
@@ -269,6 +270,11 @@ def build_bin_record(ksv, key):
 	digest = hashlib.sha1(payload).digest()
 	return payload + digest
 
+def open_binary_stream(output_path):
+	if output_path == '-':
+		return io.open(sys.stdout.fileno(), 'wb', closefd=False)
+	return open(output_path, 'wb')
+
 def output_bin_single(ksv, key, output_path):
 	"""Write a single key in binary format.
 
@@ -277,11 +283,11 @@ def output_bin_single(ksv, key, output_path):
 	"""
 
 	record = build_bin_record(ksv, key)
-	stream = sys.stdout.buffer if output_path == '-' else open(output_path, 'wb')
+	stream = open_binary_stream(output_path)
 	try:
 		stream.write(b'\x01\x00\x00\x00' + record)
 	finally:
-		if stream is not sys.stdout.buffer:
+		if output_path != '-':
 			stream.close()
 
 def output_bin_batch(count, key_matrix, is_sink, output_path):
@@ -290,7 +296,7 @@ def output_bin_batch(count, key_matrix, is_sink, output_path):
 	Format: 01 00 00 00 + (KSV + 00 00 00 + key data + SHA-1) * count
 	"""
 
-	stream = sys.stdout.buffer if output_path == '-' else open(output_path, 'wb')
+	stream = open_binary_stream(output_path)
 	try:
 		stream.write(b'\x01\x00\x00\x00')
 		for _ in range(count):
@@ -298,7 +304,7 @@ def output_bin_batch(count, key_matrix, is_sink, output_path):
 			key = gen_sink_key(ksv, key_matrix) if is_sink else gen_source_key(ksv, key_matrix)
 			stream.write(build_bin_record(ksv, key))
 	finally:
-		if stream is not sys.stdout.buffer:
+		if output_path != '-':
 			stream.close()
 
 # run the 'main' function if this file is being executed directly
