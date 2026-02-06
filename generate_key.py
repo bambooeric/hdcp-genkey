@@ -264,11 +264,20 @@ def output_json(ksv, key, is_sink):
 		sort_keys=True, indent=True))
 
 def build_bin_record(ksv, key):
-	ksv_bytes = ksv.to_bytes(5, 'little')
-	key_bytes = b''.join(x.to_bytes(7, 'little') for x in key)
+	ksv_bytes = int_to_bytes(ksv, 5, 'little')
+	key_bytes = b''.join(int_to_bytes(x, 7, 'little') for x in key)
 	payload = ksv_bytes + b'\x00\x00\x00' + key_bytes
 	digest = hashlib.sha1(payload).digest()
 	return payload + digest
+
+def int_to_bytes(value, length, byteorder):
+	result = []
+	for _ in range(length):
+		result.append(value & 0xff)
+		value >>= 8
+	if byteorder == 'big':
+		result.reverse()
+	return bytes(bytearray(result))
 
 def open_binary_stream(output_path):
 	if output_path == '-':
