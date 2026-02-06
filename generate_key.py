@@ -263,8 +263,8 @@ def output_json(ksv, key, is_sink):
 		sort_keys=True, indent=True))
 
 def build_bin_record(ksv, key):
-	ksv_bytes = ksv.to_bytes(5, 'big')
-	key_bytes = b''.join(x.to_bytes(7, 'big') for x in key)
+	ksv_bytes = ksv.to_bytes(5, 'little')
+	key_bytes = b''.join(x.to_bytes(7, 'little') for x in key)
 	payload = ksv_bytes + b'\x00\x00\x00' + key_bytes
 	digest = hashlib.sha1(payload).digest()
 	return payload + digest

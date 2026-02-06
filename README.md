@@ -30,7 +30,7 @@ Examples:
 # human-readable form
 ./generate_key.py
 
-# Generate a source key in the binary output format
+# Generate a source key in the binary output format (little-endian)
 ./generate_key.py -b key.bin
 
 # Generate 10 keys in a single binary file
