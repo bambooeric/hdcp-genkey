@@ -14,6 +14,9 @@ Options:
   --ksv=KSV             use a specific KSV expressed in hexadecimal
   -j, --json            output key and KSV as JSON
   -b FILE, --bin=FILE   output key and KSV to a binary FILE (use "-" for stdout)
+  -n COUNT, --count=COUNT
+                        number of keys to generate for binary output
+  --bin-out=FILE        output file name for binary output (overrides --bin)
   -t, --test            generate source and sink keys and test they work
 ```
 
@@ -29,6 +32,9 @@ Examples:
 
 # Generate a source key in the binary output format
 ./generate_key.py -b key.bin
+
+# Generate 10 keys in a single binary file
+./generate_key.py -b keys.bin -n 10
 
 # Run a self-test to make sure the source a sink key generation is consistent
 ./generate_key.py -t

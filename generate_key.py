@@ -59,6 +59,14 @@ def main():
 	parser.add_option('-b', '--bin', dest='output_bin',
 		help='output key and KSV to a binary FILE (use "-" for stdout)',
 		metavar='FILE', default=None)
+
+	parser.add_option('-n', '--count', dest='bin_count',
+		help='number of keys to generate for binary output',
+		metavar='COUNT', default='1')
+
+	parser.add_option('', '--bin-out', dest='bin_output_name',
+		help='output file name for binary output (overrides --bin)',
+		metavar='FILE', default=None)
 	
 	parser.add_option('-t', '--test', action='store_true', 
 		dest='do_test', default=False, 
@@ -74,6 +82,18 @@ def main():
 		do_test(key_matrix)
 		return
 
+	bin_count = int(options.bin_count)
+	output_bin_path = options.bin_output_name or options.output_bin
+
+	if bin_count < 1:
+		parser.error('count must be >= 1')
+
+	if bin_count > 1 and options.ksv is not None:
+		parser.error('count > 1 cannot be combined with --ksv')
+
+	if bin_count > 1 and not output_bin_path:
+		parser.error('count > 1 requires --bin or --bin-out')
+
 	# generate a ksv if necessary
 	if options.ksv is not None:
 		ksv = int(options.ksv, 16)
@@ -87,8 +107,11 @@ def main():
 		key = gen_source_key(ksv, key_matrix)
 
 	# output the key
-	if options.output_bin:
-		output_bin(ksv, key, options.gen_sink, options.output_bin)
+	if output_bin_path:
+		if bin_count > 1:
+			output_bin_batch(bin_count, key_matrix, options.gen_sink, output_bin_path)
+		else:
+			output_bin_single(ksv, key, output_bin_path)
 	elif options.output_json:
 		output_json(ksv, key, options.gen_sink)
 	else:
@@ -239,20 +262,41 @@ def output_json(ksv, key, is_sink):
 		'type': 'sink' if is_sink else 'source' },
 		sort_keys=True, indent=True))
 
-def output_bin(ksv, key, is_sink, output_path):
-	"""Write a binary version of the KSV and key.
-
-	Format: KSV (5 bytes) + 00 00 00 + key data (280 bytes) + SHA-1 (20 bytes).
-	"""
-
+def build_bin_record(ksv, key):
 	ksv_bytes = ksv.to_bytes(5, 'big')
 	key_bytes = b''.join(x.to_bytes(7, 'big') for x in key)
 	payload = ksv_bytes + b'\x00\x00\x00' + key_bytes
 	digest = hashlib.sha1(payload).digest()
+	return payload + digest
+
+def output_bin_single(ksv, key, output_path):
+	"""Write a single key in binary format.
+
+	Format: 01 00 00 00 + KSV (5 bytes) + 00 00 00 + key data (280 bytes)
+	+ SHA-1 (20 bytes).
+	"""
+
+	record = build_bin_record(ksv, key)
+	stream = sys.stdout.buffer if output_path == '-' else open(output_path, 'wb')
+	try:
+		stream.write(b'\x01\x00\x00\x00' + record)
+	finally:
+		if stream is not sys.stdout.buffer:
+			stream.close()
+
+def output_bin_batch(count, key_matrix, is_sink, output_path):
+	"""Write multiple keys in binary format.
+
+	Format: 01 00 00 00 + (KSV + 00 00 00 + key data + SHA-1) * count
+	"""
 
 	stream = sys.stdout.buffer if output_path == '-' else open(output_path, 'wb')
 	try:
-		stream.write(payload + digest)
+		stream.write(b'\x01\x00\x00\x00')
+		for _ in range(count):
+			ksv = gen_ksv()
+			key = gen_sink_key(ksv, key_matrix) if is_sink else gen_source_key(ksv, key_matrix)
+			stream.write(build_bin_record(ksv, key))
 	finally:
 		if stream is not sys.stdout.buffer:
 			stream.close()
